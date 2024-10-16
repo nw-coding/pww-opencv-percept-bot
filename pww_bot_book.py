@@ -25,7 +25,7 @@ class Bot(Bot):
         - Backtracks to the searching state after completing a trade.
         """
         TARGET_MIN_PRICE = 25000  # Minimum target price for trading
-        TARGET_MAX_PRICE = 65000  # Maximum target price for trading
+        TARGET_MAX_PRICE = 60000  # Maximum target price for trading
 
         # Define positions for buttons and price content area
         POSITION_CLOSE_BUTTON = (526, 185) 
@@ -45,6 +45,7 @@ class Bot(Bot):
 
                 print(f"Starting PWWBot with target price settings: Min Price = {TARGET_MIN_PRICE}, Max Price = {TARGET_MAX_PRICE}")
                 dc_messenger.send(f"Starting PWWBot with target price settings: Min Price = {TARGET_MIN_PRICE}, Max Price = {TARGET_MAX_PRICE}")
+                dc_messenger.send_screencap(self.screenshot, (43, 150), (556, 919))
                 self.click(POSITION_SELECT_1_BUTTON)
 
                 # Transition to the SEARCHING state
@@ -64,15 +65,11 @@ class Bot(Bot):
                 # Get the detected price from the specified area
                 price = self.extract_integer_from_area(AREA_PRICE_CONTENT)
 
-                if price > 0 and last_price != price:
-                    dc_messenger.send(f"The market price has changed from {last_price} to {price}.")
-                    last_price =  price
-                    dc_messenger.send_screencap(self.screenshot, (43, 150), (556, 919))
-
                 # Check if the detected price is within the target range
                 if TARGET_MIN_PRICE < price < TARGET_MAX_PRICE:
                     print(f"Price {price} is within the target range. Transitioning to TRADING state...")
-                    if found is False:
+                    if found is False and last_price != price:
+                        dc_messenger.send_screencap(self.screenshot, (43, 150), (556, 919))
                         dc_messenger.send(f"Price {price} is within the target range.")
                         found = True
                     self.lock.acquire()
@@ -84,6 +81,10 @@ class Bot(Bot):
                         dc_messenger.send(f"Price {price} is outside the target range. Continuing search...")
                         found = False
                     self.click(POSITION_CLOSE_BUTTON)
+                
+                if price > 0 and last_price != price:
+                    dc_messenger.send(f"The market price has changed from {last_price} to {price}.")
+                    last_price =  price
                 
             elif self.state == BotState.TRADING:
 
