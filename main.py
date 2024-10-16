@@ -21,16 +21,14 @@ args = parser.parse_args()
 # Dynamically import the specified bot module
 if args.bot is None:
     from bot import Bot
-else:
-    try:
-        module = importlib.import_module(args.bot)
-        Bot = getattr(module, 'Bot')
-    except ModuleNotFoundError:
-        print(f"Error: The module '{args.bot}' does not exist.")
-        sys.exit(1)  # Exit if the module is not found
-    except AttributeError:
-        print(f"Error: The class 'Bot' does not exist in the module '{args.bot}'.")
-        sys.exit(1)  # Exit if the class is not found
+elif args.bot == 'pww_bot_book':
+    from pww_bot_book import Bot
+elif args.bot == 'pww_bot_equipment':
+    from pww_bot_equipment import Bot
+elif args.bot == 'pww_bot_equipment_lookup':
+    from pww_bot_equipment_lookup import Bot
+elif args.bot == 'pww_bot_multi_books':
+    from pww_bot_multi_books import Bot
 
 # Import platform-specific screen capturing modules
 if platform.system() == "Windows":
@@ -178,7 +176,7 @@ else:
             cv2.setMouseCallback(debug_window_name, mouse_callback)
 
         # Press 'q' to quit the application
-        key = cv2.waitKey(50)
+        key = cv2.waitKey(100)
         if key == ord('q'):
             screencap.stop()
             bot.stop()

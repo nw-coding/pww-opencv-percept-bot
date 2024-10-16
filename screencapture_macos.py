@@ -191,4 +191,4 @@ class ScreenCapture:
             self.lock.acquire()
             self.screenshot = screenshot
             self.lock.release()
-            time.sleep(0.050)  # Add a slight delay to control capture rate
+            time.sleep(0.100)  # Add a slight delay to control capture rate
