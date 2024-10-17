@@ -1,110 +1,96 @@
 from bot import BotState, Bot
 from discord_messenger import DiscordMessenger
 
+# Initialize Discord messenger with the token and channel ID
 dc_messenger = DiscordMessenger(token='', channel_id='')
 dc_messenger.start()
 
 class Bot(Bot):
     """
-    A bot class for automating trading actions based on price detection
-    within a specified range.
-
-    Inherits from the Bot class and overrides the run method to implement 
-    trading logic based on detected prices on the screen.
+    A bot class for automating trading actions based on price detection within
+    a specified range. Inherits from the Bot class and overrides the run method
+    to implement trading logic based on detected prices on the screen.
     """
+
+    found = True
+    prevprice = 0
+
+    TARGET_MIN_PRICE = 40000
+    TARGET_MAX_PRICE = 140000
+
+    def send_message(self, message):
+        dc_messenger.send(message)
+
+    def send_screencap(self):
+        dc_messenger.send_screencap(self.screenshot, (43, 150), (556, 919))
+
+    def update_price(self, price):
+        if price == 0:
+            return
+        if self.prevprice != 0 and self.prevprice != price:
+            self.send_message(f"The market price has changed from {self.prevprice} to {price}.")
+        self.prevprice = price
+    
+    def check_price(self, price):
+        if self.TARGET_MIN_PRICE < price < self.TARGET_MAX_PRICE:
+            if not self.found or self.prevprice != price:
+                self.send_screencap()
+                self.send_message(f"Price {price} is within the target range.")
+                self.found = True
+        else:
+            if self.found:
+                self.send_message(f"Price {price} is outside the target range. Continuing search...")
+                self.found = False
 
     def run(self):
         """
-        The main loop of the PWWBot, executing its trading logic based on the
-        detected price of a product. The bot transitions through various states,
-        including INITIALIZING, SEARCHING, TRADING, and BACKTRACKING.
+        The main loop of the PWWBot, executing its trading logic based on the 
+        detected price of a product. The bot transitions through various states:
+        - INITIALIZING: Prepares the bot and starts the process.
+        - SEARCHING: Looks for products within a specified price range.
+        - TRADING: Executes trading logic if price is within the defined limits.
+        - BACKTRACKING: Resets back to the searching state after trading.
 
-        The bot performs the following actions:
-        - Searches for a product within a specified price range.
-        - Executes a trade when the price falls within the defined limits.
-        - Backtracks to the searching state after completing a trade.
+        It sends notifications to a Discord channel about the bot's activities, 
+        including price updates and the current state.
         """
-        TARGET_MIN_PRICE = 25000  # Minimum target price for trading
-        TARGET_MAX_PRICE = 60000  # Maximum target price for trading
 
         # Define positions for buttons and price content area
-        POSITION_CLOSE_BUTTON = (526, 185) 
-        POSITION_VIEW_BUTTON = (301, 792) 
-        POSITION_BUY_BUTTON = (301, 850) 
+        POSITION_CLOSE_BUTTON = (526, 185)
+        POSITION_VIEW_BUTTON = (301, 792)
         AREA_PRICE_CONTENT = [(297, 630), (406, 653)]
-        POSITION_SELECT_1_BUTTON = (181, 389) 
-        
-        found = True
-        last_price = 0
+        POSITION_SELECT_1_BUTTON = (181, 389)
+
         while not self.stopped:
-            # Wait for a short period if not in the TRADING state
-            if self.state is not BotState.TRADING:
-                self.wait(3)
+            self.wait(1.5)  # Pause briefly between actions unless in TRADING state
 
             if self.state == BotState.INITIALIZING:
-
-                print(f"Starting PWWBot with target price settings: Min Price = {TARGET_MIN_PRICE}, Max Price = {TARGET_MAX_PRICE}")
-                dc_messenger.send(f"Starting PWWBot with target price settings: Min Price = {TARGET_MIN_PRICE}, Max Price = {TARGET_MAX_PRICE}")
-                dc_messenger.send_screencap(self.screenshot, (43, 150), (556, 919))
+                # Notify Discord of the bot's initialization and starting price range
+                self.send_message(f"Starting PWWBot with target price settings: Min Price = {self.TARGET_MIN_PRICE}, Max Price = {self.TARGET_MAX_PRICE}")
+                self.send_screencap()
+                
+                # Perform initial click to start product selection
                 self.click(POSITION_SELECT_1_BUTTON)
 
-                # Transition to the SEARCHING state
+                # Transition to SEARCHING state
                 self.lock.acquire()
                 self.state = BotState.SEARCHING
-                print("Transitioning to SEARCHING state...")
                 self.lock.release()
 
             elif self.state == BotState.SEARCHING:
-                
-                # Click the filter and confirm buttons to search for products
-                print("Searching for products...")
+                # Perform a product search by interacting with the interface
                 self.click(POSITION_VIEW_BUTTON)
-                
-                self.wait(1)  # Wait briefly for the price to update
+                self.wait(1.5)  # Wait briefly for price update
 
-                # Get the detected price from the specified area
+                # Extract the price from the defined screen area
                 price = self.extract_integer_from_area(AREA_PRICE_CONTENT)
-
-                # Check if the detected price is within the target range
-                if TARGET_MIN_PRICE < price < TARGET_MAX_PRICE:
-                    print(f"Price {price} is within the target range. Transitioning to TRADING state...")
-                    if found is False and last_price != price:
-                        dc_messenger.send_screencap(self.screenshot, (43, 150), (556, 919))
-                        dc_messenger.send(f"Price {price} is within the target range.")
-                        found = True
-                    self.lock.acquire()
-                    self.state = BotState.TRADING  # Transition to TRADING state
-                    self.lock.release()
-                else:
-                    print(f"Price {price} is outside the target range. Continuing search...")
-                    if found is True:
-                        dc_messenger.send(f"Price {price} is outside the target range. Continuing search...")
-                        found = False
-                    self.click(POSITION_CLOSE_BUTTON)
                 
-                if price > 0 and last_price != price:
-                    dc_messenger.send(f"The market price has changed from {last_price} to {price}.")
-                    last_price =  price
+                # If the price is within the target range, notify
+                self.check_price(price)
+                # If the price has changed, notify Discord of the change
+                self.update_price(price)
                 
-            elif self.state == BotState.TRADING:
+                self.click(POSITION_CLOSE_BUTTON)
 
-                # Perform trading actions
-                print(f'Detected product meets the target price. Starting trading...')
-                # self.click(POSITION_BUY_BUTTON)
-                print(f'Transaction completed successfully.')
-
-                self.lock.acquire()
-                self.state = BotState.BACKTRACKING  # Transition to BACKTRACKING state
-                print("Transitioning to BACKTRACKING state...")
-                self.lock.release()
-
-            elif self.state == BotState.BACKTRACKING:
-
-                # Click to select the product again and prepare for searching
-                print("Backtracking to prepare for the next search...")
-                self.click(POSITION_SELECT_1_BUTTON)
-
-                self.lock.acquire()
-                self.state = BotState.SEARCHING  # Transition back to SEARCHING state
-                print("Transitioning back to SEARCHING state...")
-                self.lock.release()
+        # Stop the Discord messenger when the bot is stopped
+        dc_messenger.stop()
