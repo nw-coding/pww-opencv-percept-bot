@@ -19,12 +19,15 @@ class Bot(Bot):
     TARGET_MAX_PRICE = 140000
 
     def send_message(self, message):
+        """Send a message to Discord."""
         dc_messenger.send(message)
 
     def send_screencap(self):
+        """Send a screenshot to Discord."""
         dc_messenger.send_screencap(self.screenshot, (43, 150), (556, 919))
 
     def update_price(self, price):
+        """Update the price history and notify if there's a price change."""
         if price == 0:
             return
         if self.prevprice != 0 and self.prevprice != price:
@@ -32,6 +35,7 @@ class Bot(Bot):
         self.prevprice = price
     
     def check_price(self, price):
+        """Check if the price is within the target range and notify accordingly."""
         if self.TARGET_MIN_PRICE < price < self.TARGET_MAX_PRICE:
             if not self.found or self.prevprice != price:
                 self.send_screencap()
@@ -44,15 +48,9 @@ class Bot(Bot):
 
     def run(self):
         """
-        The main loop of the PWWBot, executing its trading logic based on the 
-        detected price of a product. The bot transitions through various states:
-        - INITIALIZING: Prepares the bot and starts the process.
-        - SEARCHING: Looks for products within a specified price range.
-        - TRADING: Executes trading logic if price is within the defined limits.
-        - BACKTRACKING: Resets back to the searching state after trading.
-
-        It sends notifications to a Discord channel about the bot's activities, 
-        including price updates and the current state.
+        Main loop of the PWWBot, executing trading logic based on the detected
+        price. The bot transitions through various states and interacts with
+        the UI to search for products and update prices.
         """
 
         # Define positions for buttons and price content area
@@ -85,9 +83,8 @@ class Bot(Bot):
                 # Extract the price from the defined screen area
                 price = self.extract_integer_from_area(AREA_PRICE_CONTENT)
                 
-                # If the price is within the target range, notify
+                # Check price range and update if necessary
                 self.check_price(price)
-                # If the price has changed, notify Discord of the change
                 self.update_price(price)
                 
                 self.click(POSITION_CLOSE_BUTTON)
