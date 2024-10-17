@@ -12,11 +12,12 @@ class Bot(Bot):
     to implement trading logic based on detected prices on the screen.
     """
 
+    item_names = ["披風", "手部", "鞋子", "頭部", "衣服", "腿部"]
     prevprices = [0, 0, 0, 0, 0, 0]
     price_index = 0
 
-    TARGET_MIN_PRICE = 5000
-    TARGET_MAX_PRICE = 12000
+    TARGET_MIN_PRICE = 8000
+    TARGET_MAX_PRICE = 13000
 
     def send_message(self, message):
         """Send a message to Discord."""
@@ -24,7 +25,7 @@ class Bot(Bot):
 
     def send_screencap(self):
         """Send a screenshot to Discord."""
-        dc_messenger.send_screencap(self.screenshot, (43, 150), (556, 919))
+        dc_messenger.send_screencap(self.screenshot, (43, 334), (556, 411))
 
     def update_price(self, price):
         """Update the price history and notify if there's a price change."""
@@ -37,7 +38,7 @@ class Bot(Bot):
         if self.TARGET_MIN_PRICE < price < self.TARGET_MAX_PRICE:
             if self.prevprices[self.price_index] != price:
                 self.send_screencap()
-                self.send_message(f"Price {price} is within the target range.")
+                self.send_message(f"{self.item_names[self.price_index]} price {price} is within the target range.")
 
     def next_button(self):
         """Move to the next item by updating the price index."""
@@ -66,7 +67,6 @@ class Bot(Bot):
             if self.state == BotState.INITIALIZING:
                 # Notify Discord of bot initialization and target price settings
                 self.send_message(f"Starting PWWBot with target price settings: Min Price = {self.TARGET_MIN_PRICE}, Max Price = {self.TARGET_MAX_PRICE}")
-                self.send_screencap()
 
                 # Transition to SEARCHING state
                 self.lock.acquire()
