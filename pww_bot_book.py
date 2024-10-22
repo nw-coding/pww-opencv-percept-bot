@@ -14,36 +14,39 @@ class Bot(Bot):
 
     found = True
     prevprice = 0
+    delete_after = 3600
 
     TARGET_MIN_PRICE = 40000
-    TARGET_MAX_PRICE = 140000
+    TARGET_MAX_PRICE = 120000
+    SCREENCAP_ENABLE = True
 
     def send_message(self, message):
         """Send a message to Discord."""
-        dc_messenger.send(message)
+        dc_messenger.send(message, delete_after=self.delete_after)
 
     def send_screencap(self):
         """Send a screenshot to Discord."""
-        dc_messenger.send_screencap(self.screenshot, (43, 150), (556, 919))
+        if self.SCREENCAP_ENABLE:
+            dc_messenger.send_screencap(self.screenshot, (43, 150), (556, 919), delete_after=self.delete_after)
 
     def update_price(self, price):
         """Update the price history and notify if there's a price change."""
         if price == 0:
             return
         if self.prevprice != 0 and self.prevprice != price:
-            self.send_message(f"The market price has changed from {self.prevprice} to {price}.")
+            self.send_message(f"當前市場擺攤價格更新: {price} ")
         self.prevprice = price
     
     def check_price(self, price):
         """Check if the price is within the target range and notify accordingly."""
         if self.TARGET_MIN_PRICE < price < self.TARGET_MAX_PRICE:
             if not self.found or self.prevprice != price:
+                self.send_message(f"目前價格為 {price}，已在設定的目標範圍內。")
                 self.send_screencap()
-                self.send_message(f"Price {price} is within the target range.")
                 self.found = True
         else:
             if self.found:
-                self.send_message(f"Price {price} is outside the target range. Continuing search...")
+                self.send_message(f"目前價格為 {price}，已超出目標範圍。")
                 self.found = False
 
     def run(self):
@@ -64,7 +67,7 @@ class Bot(Bot):
 
             if self.state == BotState.INITIALIZING:
                 # Notify Discord of the bot's initialization and starting price range
-                self.send_message(f"Starting PWWBot with target price settings: Min Price = {self.TARGET_MIN_PRICE}, Max Price = {self.TARGET_MAX_PRICE}")
+                self.send_message(f"正在啟動 PWW Bot ，目標價格設定為 最低價格: {self.TARGET_MIN_PRICE}，最高價格: {self.TARGET_MAX_PRICE}。")
                 self.send_screencap()
                 
                 # Perform initial click to start product selection
